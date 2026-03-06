@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Your Name</title>
+  <title>Omer Assa</title>
   <style>
     *, *::before, *::after {
       box-sizing: border-box;
@@ -59,18 +59,16 @@
     }
 
     .avatar {
-      width: 72px;
-      height: 72px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--accent), #3b82f6);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.75rem;
-      font-weight: 700;
-      color: #0f0f0f;
+      width: 100px;
+      height: 100px;
       margin-bottom: 1.5rem;
-      letter-spacing: -0.5px;
+      display: block;
+      cursor: grab;
+      filter: drop-shadow(0 0 20px rgba(110, 231, 183, 0.35));
+    }
+
+    .avatar:active {
+      cursor: grabbing;
     }
 
     .name {
@@ -168,9 +166,9 @@
 </head>
 <body>
   <div class="card">
-    <div class="avatar">YN</div>
+    <canvas id="avatar-canvas" class="avatar"></canvas>
 
-    <h1 class="name">Your Name</h1>
+    <h1 class="name">Omer Assa</h1>
     <p class="role">Your Role · Your Location</p>
 
     <p class="bio">
@@ -189,6 +187,16 @@
         <span class="link-arrow">→</span>
       </a>
 
+      <a class="link" href="https://instagram.com/yourhandle" target="_blank" rel="noopener">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+          <circle cx="12" cy="12" r="4"/>
+          <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor"/>
+        </svg>
+        <span class="link-label">Instagram</span>
+        <span class="link-arrow">→</span>
+      </a>
+
       <a class="link" href="mailto:you@example.com">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <rect x="2" y="4" width="20" height="16" rx="2"/>
@@ -199,5 +207,83 @@
       </a>
     </div>
   </div>
+  <script>
+    (function () {
+      const canvas = document.getElementById('avatar-canvas');
+      const ctx = canvas.getContext('2d');
+      const DPR = window.devicePixelRatio || 1;
+      const SIZE = 100;
+
+      canvas.width = SIZE * DPR;
+      canvas.height = SIZE * DPR;
+      ctx.scale(DPR, DPR);
+
+      const cx = SIZE / 2, cy = SIZE / 2;
+      const R = 38;
+      const NUM = 200;
+
+      // Fibonacci lattice for even dot distribution on sphere
+      const dots = [];
+      const golden = Math.PI * (3 - Math.sqrt(5));
+      for (let i = 0; i < NUM; i++) {
+        const y = 1 - (i / (NUM - 1)) * 2;
+        const r = Math.sqrt(1 - y * y);
+        const theta = golden * i;
+        dots.push([r * Math.cos(theta), y, r * Math.sin(theta)]);
+      }
+
+      let ry = 0, rx = 0.3;
+      let dragging = false, lx = 0, ly = 0;
+
+      function onDown(x, y) { dragging = true; lx = x; ly = y; }
+      function onMove(x, y) {
+        if (!dragging) return;
+        rx += (y - ly) * 0.005;
+        ry += (x - lx) * 0.005;
+        lx = x; ly = y;
+      }
+      function onUp() { dragging = false; }
+
+      canvas.addEventListener('mousedown', e => onDown(e.clientX, e.clientY));
+      window.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+      window.addEventListener('mouseup', onUp);
+      canvas.addEventListener('touchstart', e => { e.preventDefault(); onDown(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+      canvas.addEventListener('touchmove',  e => { e.preventDefault(); onMove(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+      canvas.addEventListener('touchend', onUp);
+
+      function rotate(x, y, z) {
+        const cosX = Math.cos(rx), sinX = Math.sin(rx);
+        const y1 = y * cosX - z * sinX;
+        const z1 = y * sinX + z * cosX;
+        const cosY = Math.cos(ry), sinY = Math.sin(ry);
+        return [x * cosY + z1 * sinY, y1, -x * sinY + z1 * cosY];
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, SIZE, SIZE);
+
+        const pts = dots
+          .map(([x, y, z]) => { const [rx_, ry_, rz_] = rotate(x, y, z); return { px: cx + rx_ * R, py: cy + ry_ * R, z: rz_ }; })
+          .sort((a, b) => a.z - b.z);
+
+        for (const { px, py, z } of pts) {
+          const t = (z + 1) / 2; // 0 = back, 1 = front
+          // Interpolate blue → mint
+          const r = Math.round(59  + (110 - 59)  * t);
+          const g = Math.round(130 + (231 - 130) * t);
+          const b = Math.round(246 + (183 - 246) * t);
+          ctx.beginPath();
+          ctx.arc(px, py, 0.7 + t * 2, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${r},${g},${b},${0.15 + t * 0.85})`;
+          ctx.fill();
+        }
+
+        if (!dragging) ry += 0.007;
+        requestAnimationFrame(draw);
+      }
+
+      draw();
+    })();
+  </script>
 </body>
 </html>
